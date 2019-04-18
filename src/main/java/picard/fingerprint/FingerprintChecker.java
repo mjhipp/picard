@@ -63,6 +63,7 @@ public class FingerprintChecker {
     private int minimumMappingQuality = DEFAULT_MINIMUM_MAPPING_QUALITY;
     private double genotypingErrorRate = DEFAULT_GENOTYPING_ERROR_RATE;
     private int maximalPLDifference = DEFAULT_MAXIMAL_PL_DIFFERENCE;
+    private File referenceFasta;
 
     public ValidationStringency getValidationStringency() {
         return validationStringency;
@@ -409,6 +410,7 @@ public class FingerprintChecker {
     public Map<FingerprintIdDetails, Fingerprint> fingerprintSamFile(final Path samFile, final IntervalList loci) {
         final SamReader in = SamReaderFactory.makeDefault()
                 .enable(SamReaderFactory.Option.CACHE_FILE_BASED_INDEXES)
+                .referenceSequence(this.referenceFasta)
                 .open(samFile);
 
         checkDictionaryGoodForFingerprinting(in.getFileHeader().getSequenceDictionary());
@@ -639,7 +641,7 @@ public class FingerprintChecker {
         final ExecutorService executor = new ThreadPoolExecutorWithExceptions(threads);
         final ExecutorCompletionService<Path> executorCompletionService = new ExecutorCompletionService<>(executor);
         final IntervalList intervals = this.haplotypes.getIntervalList();
-        final Map<FingerprintIdDetails, Fingerprint> retval = new ConcurrentHashMap<>();
+        final Map<FingerprintIdDetails, Fingerprint> retval = new ConcurrentHashMap<>(files.size());
 
         for (final Path p : files) {
             executorCompletionService.submit(() -> {
@@ -876,5 +878,9 @@ public class FingerprintChecker {
      */
     public static MatchResults calculateMatchResults(final Fingerprint observedFp, final Fingerprint expectedFp) {
         return calculateMatchResults(observedFp, expectedFp, 0, 0);
+    }
+
+    public void setReferenceFasta(final File referenceFasta) {
+        this.referenceFasta = referenceFasta;
     }
 }

@@ -10,9 +10,23 @@ import picard.util.TabbedTextFileWithHeaderParser;
 import picard.vcf.SamTestUtils;
 import picard.vcf.VcfTestUtils;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -55,7 +69,7 @@ public class CrosscheckFingerprintsTest {
     private static File  NA12892_and_NA123891_part3_vcf;
 
     private static final Map<CrosscheckMetric.DataType, List<String>> lookupMap = new HashMap<>(4);
-    
+
     @BeforeClass
     public void setup() throws IOException {
         NA12891_r1 = SamTestUtils.createIndexedBam(NA12891_r1_sam, NA12891_r1_sam);
@@ -487,10 +501,14 @@ public class CrosscheckFingerprintsTest {
         args.add("CROSSCHECK_BY=SAMPLE");
         args.add("CROSSCHECK_MODE=CHECK_ALL_OTHERS");
 
-        if(inputSampleMap!=null)  args.add("INPUT_SAMPLE_MAP="+inputSampleMap.getAbsolutePath());
-        if(secondInputSampleMap!=null)  args.add("SECOND_INPUT_SAMPLE_MAP="+secondInputSampleMap.getAbsolutePath());
+        if (inputSampleMap != null) {
+            args.add("INPUT_SAMPLE_MAP=" + inputSampleMap.getAbsolutePath());
+        }
+        if (secondInputSampleMap != null) {
+            args.add("SECOND_INPUT_SAMPLE_MAP=" + secondInputSampleMap.getAbsolutePath());
+        }
 
-        doTest(args.toArray(new String[0]), metrics, 0, 0 , CrosscheckMetric.DataType.SAMPLE, false);
+        doTest(args.toArray(new String[0]), metrics, 0, 0, CrosscheckMetric.DataType.SAMPLE, false);
     }
 
     @Test()
@@ -645,7 +663,7 @@ public class CrosscheckFingerprintsTest {
     }
 
     private void doTest(final String[] args, final File metrics, final int expectedRetVal, final int expectedNMetrics, final CrosscheckMetric.DataType expectedType, final boolean expectAllMatch) throws IOException {
-       
+
         final CrosscheckFingerprints crossChecker = new CrosscheckFingerprints();
         Assert.assertEquals(crossChecker.instanceMain(args), expectedRetVal);
 

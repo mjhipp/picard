@@ -26,6 +26,7 @@
 package picard.fingerprint;
 
 import htsjdk.samtools.BamFileIoUtils;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.util.CollectionUtil;
 import htsjdk.samtools.util.IOUtil;
@@ -42,10 +43,21 @@ import picard.cmdline.programgroups.DiagnosticsAndQCProgramGroup;
 import picard.fingerprint.CrosscheckMetric.FingerprintResult;
 import picard.util.TabbedInputParser;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.file.Path;
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -145,11 +157,11 @@ import static picard.fingerprint.CrosscheckFingerprints.CrosscheckMode.CHECK_SAM
         summary =
                 "Checks that all data in the set of input files appear to come from the same " +
                         "individual. Can be used to cross-check readgroups, libraries, samples, or files. " +
-                        "Operates on bams/sams and vcfs (including gvcfs). " +
+                        "Operates on bams/sams/crams and vcfs (including gvcfs). " +
                         "\n" +
                         "<h3>Summary</h3>\n" +
                         "Checks if all the genetic data within a set of files appear to come from the same individual. " +
-                        "It quickly determines whether a group's genotype matches that of an input SAM/BAM/VCF by selective sampling, " +
+                        "It quickly determines whether a group's genotype matches that of an input SAM/BAM/CRAM/VCF by selective sampling, " +
                         "and has been designed to work well for low-depth SAM/BAMs (as well as high depth ones and VCFs.) " +
                         "The tool collects fingerprints (essentially, genotype information from different parts of the genome) " +
                         "at the finest level available in the data (readgroup for SAM files " +
@@ -331,6 +343,10 @@ public class CrosscheckFingerprints extends CommandLineProgram {
     @Argument(doc = "When one or more mismatches between groups is detected, exit with this value instead of 0.")
     public int EXIT_CODE_WHEN_MISMATCH = 1;
 
+    @Hidden
+    @Argument(doc = "When true code will forgo readability checks on input files (useful for cloud access)")
+    public boolean SKIP_INPUT_READABLITY_TEST=false;
+
     private final Log log = Log.getInstance(CrosscheckFingerprints.class);
 
     private double[][] crosscheckMatrix = null;
@@ -342,12 +358,24 @@ public class CrosscheckFingerprints extends CommandLineProgram {
         if (GENOTYPING_ERROR_RATE <= 0 || GENOTYPING_ERROR_RATE >= 1) {
             return new String[]{"Genotyping error must be strictly greater than 0 and less than 1, found " + GENOTYPING_ERROR_RATE};
         }
-        if (SECOND_INPUT == null && INPUT_SAMPLE_MAP !=null ){
+        if (SECOND_INPUT == null && INPUT_SAMPLE_MAP != null) {
             return new String[]{"INPUT_SAMPLE_MAP can only be used when also using SECOND_INPUT"};
         }
-        if (SECOND_INPUT == null && SECOND_INPUT_SAMPLE_MAP !=null ){
+        if (SECOND_INPUT == null && SECOND_INPUT_SAMPLE_MAP != null) {
             return new String[]{"SECOND_INPUT_SAMPLE_MAP can only be used when also using SECOND_INPUT"};
         }
+
+        //check that reference is provided if using crams as input
+        if (REFERENCE_SEQUENCE == null) {
+            final List<String> allInputs = new ArrayList<>(INPUT);
+            allInputs.addAll(SECOND_INPUT);
+            for (final String input : allInputs) {
+                if (input.endsWith(SamReader.Type.CRAM_TYPE.fileExtension())) {
+                    return new String[]{"REFERENCE must be provided when using CRAM as input."};
+                }
+            }
+        }
+
         return super.customCommandLineValidation();
     }
 
@@ -398,27 +426,26 @@ public class CrosscheckFingerprints extends CommandLineProgram {
 
         checker.setAllowDuplicateReads(ALLOW_DUPLICATE_READS);
         checker.setValidationStringency(VALIDATION_STRINGENCY);
+        checker.setReferenceFasta(REFERENCE_SEQUENCE);
 
         final List<String> extensions = new ArrayList<>();
 
-        extensions.add(BamFileIoUtils.BAM_FILE_EXTENSION);
-        extensions.add(IOUtil.SAM_FILE_EXTENSION);
+        extensions.add(SamReader.Type.BAM_TYPE.fileExtension());
+        extensions.add(SamReader.Type.SAM_TYPE.fileExtension());
+        extensions.add(SamReader.Type.CRAM_TYPE.fileExtension());
         extensions.addAll(Arrays.asList(IOUtil.VCF_EXTENSIONS));
 
         final List<Path> inputPaths = IOUtil.getPaths(INPUT);
 
-        IOUtil.assertPathsAreReadable(inputPaths);
-        final String[] extensionsArray = extensions.toArray(new String[0]);
-        final List<Path> unrolledFiles = IOUtil.unrollPaths(inputPaths, extensionsArray);
-        IOUtil.assertPathsAreReadable(unrolledFiles);
+        final List<Path> unrolledFiles = IOUtil.unrollPaths(inputPaths, extensions.toArray(new String[0]));
+        if (!SKIP_INPUT_READABLITY_TEST) IOUtil.assertPathsAreReadable(unrolledFiles);
 
         final List<Path> secondInputsPaths = IOUtil.getPaths(SECOND_INPUT);
 
         // unroll and check readable here, as it can be annoying to fingerprint INPUT files and only then discover a problem
         // in a file in SECOND_INPUT
-        IOUtil.assertPathsAreReadable(secondInputsPaths);
-        final List<Path> unrolledFiles2 = IOUtil.unrollPaths(secondInputsPaths, extensionsArray);
-        IOUtil.assertPathsAreReadable(unrolledFiles2);
+        final List<Path> unrolledFiles2 = IOUtil.unrollPaths(secondInputsPaths, extensions.toArray(new String[0]));
+        if (!SKIP_INPUT_READABLITY_TEST) IOUtil.assertPathsAreReadable(unrolledFiles2);
 
         log.info("Fingerprinting " + unrolledFiles.size() + " INPUT files.");
         final Map<FingerprintIdDetails, Fingerprint> fpMap = checker.fingerprintFiles(unrolledFiles, NUM_THREADS, 1, TimeUnit.DAYS);
@@ -439,7 +466,6 @@ public class CrosscheckFingerprints extends CommandLineProgram {
             numUnexpected = crossCheckGrouped(fpMap, fpMap, metrics, getFingerprintIdDetailsStringFunction(CROSSCHECK_BY), CROSSCHECK_BY);
         } else {
             log.info("Fingerprinting " + unrolledFiles2.size() + " SECOND_INPUT files.");
-
             final Map<FingerprintIdDetails, Fingerprint> fpMap2 = checker.fingerprintFiles(unrolledFiles2, NUM_THREADS, 1, TimeUnit.DAYS);
 
             if (SECOND_INPUT_SAMPLE_MAP != null) {
@@ -643,8 +669,8 @@ public class CrosscheckFingerprints extends CommandLineProgram {
             writer.write(CROSSCHECK_BY.name());
 
             // write the names of the keys as the first row
-            for (int col = 0; col < rhsMatrixKeys.size(); col++) {
-                writer.write('\t' + rhsMatrixKeys.get(col));
+            for (String rhsMatrixKey : rhsMatrixKeys) {
+                writer.write('\t' + rhsMatrixKey);
             }
             writer.newLine();
 
