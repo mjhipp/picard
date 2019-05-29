@@ -45,21 +45,11 @@ public class InfiniumEGTFile extends InfiniumDataFile {
     private static final int VALID_GENTRAIN_DATA_TYPE = 9;
     private static final int INVALID_FILE_VERSION = 2;
 
-    public int[] nAA;
-    public int[] nAB;
-    public int[] nBB;
-    public float[] meanRAA;
-    public float[] meanThetaAA;
-    public float[] devRAA;
-    public float[] devThetaAA;
-    public float[] meanRAB;
-    public float[] meanThetaAB;
-    public float[] devRAB;
-    public float[] devThetaAB;
-    public float[] meanRBB;
-    public float[] meanThetaBB;
-    public float[] devRBB;
-    public float[] devThetaBB;
+    public int[][] n;
+    public float[][] meanR;
+    public float[][] meanTheta;
+    public float[][] devR;
+    public float[][] devTheta;
 
     public float[] totalScore;
 
@@ -98,21 +88,21 @@ public class InfiniumEGTFile extends InfiniumDataFile {
         initializeArrays(numCodes);
 
         for (int i = 0; i < numCodes; i++) {
-            nAA[i] = parseInt();
-            nAB[i] = parseInt();
-            nBB[i] = parseInt();
-            devRAA[i] = parseFloat();
-            devRAB[i] = parseFloat();
-            devRBB[i] = parseFloat();
-            meanRAA[i] = parseFloat();
-            meanRAB[i] = parseFloat();
-            meanRBB[i] = parseFloat();
-            devThetaAA[i] = parseFloat();
-            devThetaAB[i] = parseFloat();
-            devThetaBB[i] = parseFloat();
-            meanThetaAA[i] = parseFloat();
-            meanThetaAB[i] = parseFloat();
-            meanThetaBB[i] = parseFloat();
+            for (InfiniumVcfFields.GENOTYPE_VALUES gtValue : InfiniumVcfFields.GENOTYPE_VALUES.values()) {
+                n[i][gtValue.ordinal()] = parseInt();
+            }
+            for (InfiniumVcfFields.GENOTYPE_VALUES gtValue : InfiniumVcfFields.GENOTYPE_VALUES.values()) {
+                devR[i][gtValue.ordinal()] = parseFloat();
+            }
+            for (InfiniumVcfFields.GENOTYPE_VALUES gtValue : InfiniumVcfFields.GENOTYPE_VALUES.values()) {
+                meanR[i][gtValue.ordinal()] = parseFloat();
+            }
+            for (InfiniumVcfFields.GENOTYPE_VALUES gtValue : InfiniumVcfFields.GENOTYPE_VALUES.values()) {
+                devTheta[i][gtValue.ordinal()] = parseFloat();
+            }
+            for (InfiniumVcfFields.GENOTYPE_VALUES gtValue : InfiniumVcfFields.GENOTYPE_VALUES.values()) {
+                meanTheta[i][gtValue.ordinal()] = parseFloat();
+            }
 
             // 15 unused floats
             skipFloats(15);
@@ -141,22 +131,11 @@ public class InfiniumEGTFile extends InfiniumDataFile {
 
     protected void initializeArrays(int numCodes) {
 
-        nAA = new int[numCodes];
-        nAB = new int[numCodes];
-        nBB = new int[numCodes];
-
-        devRAA = new float[numCodes];
-        devRAB = new float[numCodes];
-        devRBB = new float[numCodes];
-        meanRAA = new float[numCodes];
-        meanRAB = new float[numCodes];
-        meanRBB = new float[numCodes];
-        devThetaAA = new float[numCodes];
-        devThetaAB = new float[numCodes];
-        devThetaBB = new float[numCodes];
-        meanThetaAA = new float[numCodes];
-        meanThetaAB = new float[numCodes];
-        meanThetaBB = new float[numCodes];
+        n = new int[numCodes][InfiniumVcfFields.GENOTYPE_VALUES.values().length];
+        devR = new float[numCodes][InfiniumVcfFields.GENOTYPE_VALUES.values().length];
+        meanR = new float[numCodes][InfiniumVcfFields.GENOTYPE_VALUES.values().length];
+        devTheta = new float[numCodes][InfiniumVcfFields.GENOTYPE_VALUES.values().length];
+        meanTheta = new float[numCodes][InfiniumVcfFields.GENOTYPE_VALUES.values().length];
 
         totalScore = new float[numCodes];
         rsNames = new String[numCodes];

@@ -112,10 +112,9 @@ public class InfiniumVcfFields {
     public static final String FAIL_REF = "FAIL_REF";
     public static final String ZEROED_OUT_ASSAY = "ZEROED_OUT_ASSAY";
 
-    public static enum GENOTYPE_VALUES {AA, AB, BB}
+    public enum GENOTYPE_VALUES {AA, AB, BB}
 
-
-    public static String getValueFromVcfOtherHeaderLine(final VCFHeader vcfHeader, final String keyName) {
+    static String getValueFromVcfOtherHeaderLine(final VCFHeader vcfHeader, final String keyName) {
         VCFHeaderLine otherHeaderLine = vcfHeader.getOtherHeaderLine(keyName);
         if (otherHeaderLine != null) {
             return otherHeaderLine.getValue();
@@ -124,7 +123,7 @@ public class InfiniumVcfFields {
         }
     }
 
-    public static Iso8601Date getDateFromVcfOtherHeaderLine(final VCFHeader vcfHeader, final String keyName, final SimpleDateFormat dateformat) {
+    static Iso8601Date getDateFromVcfOtherHeaderLine(final VCFHeader vcfHeader, final String keyName, final SimpleDateFormat dateformat) {
         String dateString = InfiniumVcfFields.getValueFromVcfOtherHeaderLine(vcfHeader, keyName);
         try {
             return new Iso8601Date(dateformat.parse(dateString));
@@ -133,7 +132,7 @@ public class InfiniumVcfFields {
         }
     }
 
-    public static Integer getIntegerFromVcfOtherHeaderLine(final VCFHeader vcfHeader, final String keyName) {
+    static Integer getIntegerFromVcfOtherHeaderLine(final VCFHeader vcfHeader, final String keyName) {
         VCFHeaderLine otherHeaderLine = vcfHeader.getOtherHeaderLine(keyName);
         if (otherHeaderLine != null) {
             return Integer.valueOf(otherHeaderLine.getValue());
@@ -142,7 +141,7 @@ public class InfiniumVcfFields {
         }
     }
 
-    public static String getOptionalValueFromVcfOtherHeaderLine(final VCFHeader vcfHeader, final String keyName) {
+    static String getOptionalValueFromVcfOtherHeaderLine(final VCFHeader vcfHeader, final String keyName) {
         VCFHeaderLine otherHeaderLine = vcfHeader.getOtherHeaderLine(keyName);
         if (otherHeaderLine != null) {
             return otherHeaderLine.getValue();

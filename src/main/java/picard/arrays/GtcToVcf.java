@@ -358,41 +358,23 @@ public class GtcToVcf extends CommandLineProgram {
         builder.attribute(InfiniumVcfFields.ILLUMINA_BUILD, record.getGenomeBuild());
         builder.attribute(InfiniumVcfFields.SOURCE, record.getSource().replace(' ', '_'));
         builder.attribute(InfiniumVcfFields.GC_SCORE, formatFloatForVcf(egtFile.totalScore[egtIndex]));
-        builder.attribute(InfiniumVcfFields.N[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], egtFile.nAA[egtIndex]);
-        builder.attribute(InfiniumVcfFields.N[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], egtFile.nAB[egtIndex]);
-        builder.attribute(InfiniumVcfFields.N[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], egtFile.nBB[egtIndex]);
-        builder.attribute(InfiniumVcfFields.DEV_R[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], formatFloatForVcf(egtFile.devRAA[egtIndex]));
-        builder.attribute(InfiniumVcfFields.DEV_R[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], formatFloatForVcf(egtFile.devRAB[egtIndex]));
-        builder.attribute(InfiniumVcfFields.DEV_R[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], formatFloatForVcf(egtFile.devRBB[egtIndex]));
-        builder.attribute(InfiniumVcfFields.MEAN_R[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], formatFloatForVcf(egtFile.meanRAA[egtIndex]));
-        builder.attribute(InfiniumVcfFields.MEAN_R[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], formatFloatForVcf(egtFile.meanRAB[egtIndex]));
-        builder.attribute(InfiniumVcfFields.MEAN_R[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], formatFloatForVcf(egtFile.meanRBB[egtIndex]));
-        builder.attribute(InfiniumVcfFields.DEV_THETA[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], formatFloatForVcf(egtFile.devThetaAA[egtIndex]));
-        builder.attribute(InfiniumVcfFields.DEV_THETA[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], formatFloatForVcf(egtFile.devThetaAB[egtIndex]));
-        builder.attribute(InfiniumVcfFields.DEV_THETA[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], formatFloatForVcf(egtFile.devThetaBB[egtIndex]));
-        builder.attribute(InfiniumVcfFields.MEAN_THETA[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], formatFloatForVcf(egtFile.meanThetaAA[egtIndex]));
-        builder.attribute(InfiniumVcfFields.MEAN_THETA[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], formatFloatForVcf(egtFile.meanThetaAB[egtIndex]));
-        builder.attribute(InfiniumVcfFields.MEAN_THETA[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], formatFloatForVcf(egtFile.meanThetaBB[egtIndex]));
 
-        EuclideanValues aaVals = polarToEuclidean(egtFile.meanRAA[egtIndex], egtFile.devRAA[egtIndex],
-                egtFile.meanThetaAA[egtIndex], egtFile.devThetaAA[egtIndex]);
-        EuclideanValues abVals = polarToEuclidean(egtFile.meanRAB[egtIndex], egtFile.devRAB[egtIndex],
-                egtFile.meanThetaAB[egtIndex], egtFile.devThetaAB[egtIndex]);
-        EuclideanValues bbVals = polarToEuclidean(egtFile.meanRBB[egtIndex], egtFile.devRBB[egtIndex],
-                egtFile.meanThetaBB[egtIndex], egtFile.devThetaBB[egtIndex]);
+        for (InfiniumVcfFields.GENOTYPE_VALUES gtValue : InfiniumVcfFields.GENOTYPE_VALUES.values()) {
+            builder.attribute(InfiniumVcfFields.N[gtValue.ordinal()], egtFile.n[egtIndex][gtValue.ordinal()]);
+            builder.attribute(InfiniumVcfFields.DEV_R[gtValue.ordinal()], formatFloatForVcf(egtFile.devR[egtIndex][gtValue.ordinal()]));
+            builder.attribute(InfiniumVcfFields.MEAN_R[gtValue.ordinal()], formatFloatForVcf(egtFile.meanR[egtIndex][gtValue.ordinal()]));
+            builder.attribute(InfiniumVcfFields.DEV_THETA[gtValue.ordinal()], formatFloatForVcf(egtFile.devTheta[egtIndex][gtValue.ordinal()]));
+            builder.attribute(InfiniumVcfFields.MEAN_THETA[gtValue.ordinal()], formatFloatForVcf(egtFile.meanTheta[egtIndex][gtValue.ordinal()]));
 
-        builder.attribute(InfiniumVcfFields.DEV_X[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], formatFloatForVcf(aaVals.devX));
-        builder.attribute(InfiniumVcfFields.DEV_X[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], formatFloatForVcf(abVals.devX));
-        builder.attribute(InfiniumVcfFields.DEV_X[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], formatFloatForVcf(bbVals.devX));
-        builder.attribute(InfiniumVcfFields.MEAN_X[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], formatFloatForVcf(aaVals.meanX));
-        builder.attribute(InfiniumVcfFields.MEAN_X[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], formatFloatForVcf(abVals.meanX));
-        builder.attribute(InfiniumVcfFields.MEAN_X[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], formatFloatForVcf(bbVals.meanX));
-        builder.attribute(InfiniumVcfFields.DEV_Y[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], formatFloatForVcf(aaVals.devY));
-        builder.attribute(InfiniumVcfFields.DEV_Y[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], formatFloatForVcf(abVals.devY));
-        builder.attribute(InfiniumVcfFields.DEV_Y[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], formatFloatForVcf(bbVals.devY));
-        builder.attribute(InfiniumVcfFields.MEAN_Y[InfiniumVcfFields.GENOTYPE_VALUES.AA.ordinal()], formatFloatForVcf(aaVals.meanY));
-        builder.attribute(InfiniumVcfFields.MEAN_Y[InfiniumVcfFields.GENOTYPE_VALUES.AB.ordinal()], formatFloatForVcf(abVals.meanY));
-        builder.attribute(InfiniumVcfFields.MEAN_Y[InfiniumVcfFields.GENOTYPE_VALUES.BB.ordinal()], formatFloatForVcf(bbVals.meanY));
+            EuclideanValues genotypeEuclideanValues = polarToEuclidean(egtFile.meanR[egtIndex][gtValue.ordinal()], egtFile.devR[egtIndex][gtValue.ordinal()],
+                    egtFile.meanTheta[egtIndex][gtValue.ordinal()], egtFile.devTheta[egtIndex][gtValue.ordinal()]);
+            builder.attribute(InfiniumVcfFields.DEV_X[gtValue.ordinal()], formatFloatForVcf(genotypeEuclideanValues.devX));
+            builder.attribute(InfiniumVcfFields.MEAN_X[gtValue.ordinal()], formatFloatForVcf(genotypeEuclideanValues.meanX));
+            builder.attribute(InfiniumVcfFields.DEV_Y[gtValue.ordinal()], formatFloatForVcf(genotypeEuclideanValues.devY));
+            builder.attribute(InfiniumVcfFields.MEAN_Y[gtValue.ordinal()], formatFloatForVcf(genotypeEuclideanValues.meanY));
+        }
+
+
         final String rsid = record.getRsId();
         if (StringUtils.isNotEmpty(rsid)) {
             builder.attribute(InfiniumVcfFields.RS_ID, rsid);
