@@ -259,19 +259,16 @@ public class GtcToVcf extends CommandLineProgram {
     }
 
     static Sex getFingerprintSex(final File file) {
-        if (file == null) {
-            return Sex.Unknown;
-        } else {
+        if (file != null) {
             try (VCFFileReader reader = new VCFFileReader(file, false)) {
                 final VCFHeader header = reader.getFileHeader();
                 final VCFHeaderLine gender = header.getMetaDataLine("gender");
                 if (gender != null) {
                     return Sex.valueOf(gender.getValue());
-                } else {
-                    return Sex.Unknown;
                 }
             }
         }
+        return Sex.Unknown;
     }
 
     private void fillContexts(final SortingCollection<VariantContext> contexts, final InfiniumGTCFile gtcFile,
