@@ -24,6 +24,7 @@
 
 package picard.arrays;
 
+import org.broadinstitute.barclay.help.DocumentedFeature;
 import picard.arrays.illumina.ArraysControlInfo;
 import picard.arrays.illumina.Build37ExtendedIlluminaManifest;
 import picard.arrays.illumina.Build37ExtendedIlluminaManifestRecord;
@@ -93,30 +94,27 @@ import java.util.Set;
         oneLineSummary = "Program to convert a GTC file to a VCF",
         programGroup = picard.cmdline.programgroups.GenotypingArraysProgramGroup.class
 )
+@DocumentedFeature
 public class GtcToVcf extends CommandLineProgram {
 
 
     static final String USAGE_DETAILS =
-            "<p>GtcToVcf takes an Illumina GTC file and converts it to a VCF file using several supporting files.</p>" +
-                    "<p>A GTC file is an Illumina-specific file containing called genotypes in AA/AB/BB format.</p>" +
-                    "<a href='https://github.com/Illumina/BeadArrayFiles/blob/develop/docs/GTC_File_Format_v5.pdf'></a></p>" +
-                    "<p>A VCF, aka Variant Calling Format, is a text file for storing how a sequenced sample differs from the reference genome. " +
-                    "<a href='http://software.broadinstitute.org/software/igv/book/export/html/184'></a></p>" +
-                    "<h3>Usage example:</h3>" +
+            "GtcToVcf takes an Illumina GTC file and converts it to a VCF file using several supporting files. " +
+                    "A GTC file is an Illumina-specific file containing called genotypes in AA/AB/BB format. " +
+                    "<a href='https://github.com/Illumina/BeadArrayFiles/blob/develop/docs/GTC_File_Format_v5.pdf'></a> " +
+                    "A VCF, aka Variant Calling Format, is a text file for storing how a sequenced sample differs from the reference genome. " +
+                    "<a href='http://software.broadinstitute.org/software/igv/book/export/html/184'></a>" +
+                    "<h4>Usage example:</h4>" +
                     "<pre>" +
-                    "GtcToVcf\n" +
-                    "\t--INPUT input.gtc\n" +
-                    "\t--REFERENCE_SEQUENCE reference.fasta\n" +
-                    "\t--OUTPUT output.vcf\n" +
-                    "\t--EXTENDED_ILLUMINA_MANIFEST chip_name.extended.csv\n" +
-                    "\t--CLUSTER_FILE chip_name.egt\n" +
-                    "\t--ILLUMINA_NORMALIZATION_MANIFEST chip_name.bpm.csv\n" +
-                    "\t--SAMPLE_ALIAS my_sample_alias\n" +
-                    "\t--ANALYSIS_VERSION_NUMBER 1\n" +
-                    "\t--EXPECTED_GENDER UNKNOWN\n" +
-                    "\t--GENDER_GTC gender.gtc\n" +
-                    "\t--FINGERPRINT_GENOTYPES_VCF_FILE fingerprint_genotypes.vcf" +
-                    "</pre><hr />";
+                    "java -jar picard.jar GtcToVcf \\<br />" +
+                    "INPUT=input.gtc \\<br />" +
+                    "REFERENCE_SEQUENCE=reference.fasta \\<br />" +
+                    "OUTPUT=output.vcf \\<br />" +
+                    "EXTENDED_ILLUMINA_MANIFEST=chip_name.extended.csv \\<br />" +
+                    "CLUSTER_FILE=chip_name.egt \\<br />" +
+                    "ILLUMINA_NORMALIZATION_MANIFEST=chip_name.bpm.csv \\<br />" +
+                    "SAMPLE_ALIAS=my_sample_alias \\<br />" +
+                    "</pre>";
 
     private final Log log = Log.getInstance(GtcToVcf.class);
 
@@ -151,7 +149,7 @@ public class GtcToVcf extends CommandLineProgram {
     @Argument(shortName = "FP_VCF", doc = "The fingerprint VCF for this sample", optional = true)
     public File FINGERPRINT_GENOTYPES_VCF_FILE;
 
-    public static final List<Allele> NO_CALL_ALLELES = Collections.unmodifiableList(Arrays.asList(Allele.NO_CALL, Allele.NO_CALL));
+    static final List<Allele> NO_CALL_ALLELES = Collections.unmodifiableList(Arrays.asList(Allele.NO_CALL, Allele.NO_CALL));
 
     // This file gets initialized during customCommandLineValidation.
     // It is a static member so we don't have to parse the file twice.
@@ -212,8 +210,9 @@ public class GtcToVcf extends CommandLineProgram {
         IOUtil.assertFileIsWritable(OUTPUT);
         refSeq = ReferenceSequenceFileFactory.getReferenceSequenceFile(REFERENCE_SEQUENCE);
         final SAMSequenceDictionary sequenceDictionary = refSeq.getSequenceDictionary();
-        if (!sequenceDictionary.getSequence(0).getAssembly().equals("GRCh37")) {
-            return new String[]{"This tool is currently only implemented to support NCBI Build 37 / HG19 Reference Sequence."};
+        final String assembly = sequenceDictionary.getSequence(0).getAssembly();
+        if (!assembly.equals("GRCh37")) {
+            return new String[]{"The selected reference sequence ('" + assembly + "') is not supported.  This tool is currently only implemented to support NCBI Build 37 / HG19 Reference Sequence."};
         }
 
         if (FINGERPRINT_GENOTYPES_VCF_FILE != null) {
@@ -301,8 +300,8 @@ public class GtcToVcf extends CommandLineProgram {
         log.info(manifest.getNumAssays() + " Variants on the " + manifest.getDescriptorFileName() + " genotyping array manifest file");
     }
 
-    protected VariantContext makeVariantContext(Build37ExtendedIlluminaManifestRecord record, final InfiniumGTCRecord gtcRecord,
-                                                final InfiniumEGTFile egtFile, final ProgressLogger progressLogger) {
+    private VariantContext makeVariantContext(Build37ExtendedIlluminaManifestRecord record, final InfiniumGTCRecord gtcRecord,
+                                              final InfiniumEGTFile egtFile, final ProgressLogger progressLogger) {
         // If the record is not flagged as errant in the manifest we include it in the VCF
         Allele A = record.getAlleleA();
         Allele B = record.getAlleleB();
@@ -613,7 +612,7 @@ public class GtcToVcf extends CommandLineProgram {
             lines.add(new VCFInfoHeaderLine(InfiniumVcfFields.MEAN_X[gtValue.ordinal()], 1, VCFHeaderLineType.Float, "Mean of normalized X for " + gtValue.name() +" cluster"));
             lines.add(new VCFInfoHeaderLine(InfiniumVcfFields.MEAN_Y[gtValue.ordinal()], 1, VCFHeaderLineType.Float, "Mean of normalized Y for " + gtValue.name() +" cluster"));
         }
-        lines.add(new VCFInfoHeaderLine(InfiniumVcfFields.RS_ID, 1, VCFHeaderLineType.String, "dbSNP rs ID"));
+        lines.add(new VCFInfoHeaderLine(InfiniumVcfFields.RS_ID, 1, VCFHeaderLineType.String, "dbSNP rsID"));
 
         lines.add(new VCFFilterHeaderLine(InfiniumVcfFields.DUPE, "Duplicate assays position."));
         lines.add(new VCFFilterHeaderLine(InfiniumVcfFields.TRIALLELIC, "Tri-allelic assay."));

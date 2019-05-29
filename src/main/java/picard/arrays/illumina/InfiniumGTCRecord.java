@@ -42,6 +42,4 @@ public class InfiniumGTCRecord {
         this.bAlleleFreq = Float.parseFloat(components[8]);
         this.logRRatio = Float.parseFloat(components[9]);
     }
-
-
 }

@@ -57,7 +57,7 @@ public class InfiniumNormalizationManifest {
             CHROM_TO_BYTE.put(chrom, new Byte(chrom));
         }
         CHROM_TO_BYTE.put("X", new Byte("23"));
-        CHROM_TO_BYTE.put("XY", new Byte("23"));
+        CHROM_TO_BYTE.put("XY", new Byte("23"));        // XY is Illumina notation for PAR, the pseudo-autosomal region
         CHROM_TO_BYTE.put("Y", new Byte("24"));
         CHROM_TO_BYTE.put("MT", new Byte("25"));
     }
