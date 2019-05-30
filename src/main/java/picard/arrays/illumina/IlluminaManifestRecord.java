@@ -42,7 +42,7 @@ public class IlluminaManifestRecord {
 
     private final String ilmnId;
     private final String name;
-    private final String ilmnStrand;
+    private IlluminaStrand ilmnStrand;
 
     private final String snp;
     private final boolean isIndel;              // Not part of the file...
@@ -64,7 +64,7 @@ public class IlluminaManifestRecord {
     private final String species;
     private final String source;
     private final String sourceVersion;
-    private final String sourceStrand;
+    private IlluminaStrand sourceStrand;
     private final String sourceSeq;
     private final String topGenomicSeq;
     private final int beadSetId;
@@ -75,6 +75,14 @@ public class IlluminaManifestRecord {
     private static final Set<String> indels = Stream.of("[D/I]", "[I/D]").collect(Collectors.toSet());
     private static final Set<String> ambiguousSnps = Stream.of("[A/T]", "[T/A]", "[G/C]", "[C/G]").collect(Collectors.toSet());
 
+    protected enum IlluminaStrand {
+        PLUS,
+        MINUS,
+        TOP,
+        BOT,
+        NONE
+    }
+
     public static final String ILLUMINA_FLAGGED_BAD_CHR = "0";
 
     IlluminaManifestRecord(final Map<String, Integer> columnNameToIndex, final String[] line, final int index) {
@@ -83,8 +91,7 @@ public class IlluminaManifestRecord {
 
         ilmnId = getColumnValue(columnNameToIndex, IlluminaManifest.ILLUMINA_ID_HEADER_NAME);
         name = getColumnValue(columnNameToIndex, IlluminaManifest.NAME_HEADER_NAME);
-        ilmnStrand = getColumnValue(columnNameToIndex, IlluminaManifest.ILLUMINA_STRAND_HEADER_NAME);
-
+        ilmnStrand = getIlmnStrandFromManifest(columnNameToIndex);
         snp = getColumnValue(columnNameToIndex, IlluminaManifest.SNP_HEADER_NAME).toUpperCase();         // This is of the form [A/T] or [D/I].
         isIndel = indels.contains(getSnp());
         isAmbiguous = ambiguousSnps.contains(getSnp());
@@ -101,7 +108,7 @@ public class IlluminaManifestRecord {
         species = getColumnValue(columnNameToIndex, IlluminaManifest.SPECIES_HEADER_NAME);
         source = getColumnValue(columnNameToIndex, IlluminaManifest.SOURCE_HEADER_NAME);
         sourceVersion = getColumnValue(columnNameToIndex, IlluminaManifest.SOURCE_VERSION_HEADER_NAME);
-        sourceStrand = getColumnValue(columnNameToIndex, IlluminaManifest.SOURCE_STRAND_HEADER_NAME);
+        sourceStrand = getSourceStrandFromManifest(columnNameToIndex);
         sourceSeq = getColumnValue(columnNameToIndex, IlluminaManifest.SOURCE_SEQ_HEADER_NAME);
         topGenomicSeq = getColumnValue(columnNameToIndex, IlluminaManifest.TOP_GENOMIC_SEQ_HEADER_NAME);
         beadSetId = parseIntOrNull(getColumnValue(columnNameToIndex, IlluminaManifest.BEAD_SET_ID_HEADER_NAME));
@@ -113,19 +120,28 @@ public class IlluminaManifestRecord {
         hgGenomeBuild = getHgGenomeBuild(majorGenomeBuild);
     }
 
+    private IlluminaStrand getIlmnStrandFromManifest(final Map<String, Integer> columnNameToIndex) {
+        return getIlluminaStrandFromManifest(columnNameToIndex, IlluminaManifest.ILLUMINA_STRAND_HEADER_NAME);
+    }
+
     private Strand getRefStrandFromManifest(final Map<String, Integer> columnNameToIndex) {
         final String strandValue = getColumnValueIfPresentInManifest(columnNameToIndex, IlluminaManifest.REF_STRAND_HEADER_NAME);
         if (strandValue == null) {
             return Strand.NONE;
         }
-        switch (strandValue) {
-            case "+":
-                return Strand.POSITIVE;
-            case "-":
-                return Strand.NEGATIVE;
-            default:
-                throw new PicardException("Unrecognized value ('" + strandValue + "') for '" + IlluminaManifest.REF_STRAND_HEADER_NAME + "'");
+        return Strand.decode(strandValue.charAt(0));
+    }
+
+    private IlluminaStrand getSourceStrandFromManifest(final Map<String, Integer> columnNameToIndex) {
+        return getIlluminaStrandFromManifest(columnNameToIndex, IlluminaManifest.SOURCE_STRAND_HEADER_NAME);
+    }
+
+    private IlluminaStrand getIlluminaStrandFromManifest(final Map<String, Integer> columnNameToIndex, final String strandHeaderName) {
+        final String strandValue = getColumnValueIfPresentInManifest(columnNameToIndex, strandHeaderName);
+        if (strandValue == null) {
+            return IlluminaStrand.NONE;
         }
+        return IlluminaStrand.valueOf(strandValue);
     }
 
     private boolean getIntensityOnlyFromManifest(final Map<String, Integer> columnNameToIndex) {
@@ -220,7 +236,7 @@ public class IlluminaManifestRecord {
         return name;
     }
 
-    public String getIlmnStrand() {
+    public IlluminaStrand getIlmnStrand() {
         return ilmnStrand;
     }
 
@@ -296,7 +312,7 @@ public class IlluminaManifestRecord {
         return sourceVersion;
     }
 
-    public String getSourceStrand() {
+    public IlluminaStrand getSourceStrand() {
         return sourceStrand;
     }
 

@@ -238,12 +238,16 @@ public class IlluminaManifest  {
         final String[] columns = line.trim().split(",");
         Map<String, Integer> columnNameToIndex = new HashMap<>();
         int index = 0;
-        final Set<String> validHeaderNames = new HashSet<>(Arrays.asList(getAllPossibleHeaderNames()));
+        Set<String> validHeaderNames = new HashSet<>(Arrays.asList(getAllPossibleHeaderNames()));
         for (String columnName : columns) {
             if (!validHeaderNames.contains(columnName)) {
                 throw new PicardException("Unrecognized Column '" + columnName + "' in Manifest file: " + manifestFile);
             }
             columnNameToIndex.put(columnName, index++);
+        }
+        if (!columnNameToIndex.containsKey(REF_STRAND_HEADER_NAME)) {
+            // Some Illumina manifests do not have ref_strand defined.  We will use the illumina strand instead.
+            log.warn("Illumina Manifest does not contain '" + REF_STRAND_HEADER_NAME + "' - we will use '" + ILLUMINA_STRAND_HEADER_NAME + "'");
         }
         assayHeaderNames = columns;
         assayHeaderNameToIndex = columnNameToIndex;
